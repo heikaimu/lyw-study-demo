@@ -1,0 +1,209 @@
+<!--
+ * @Description: Canvas小球
+ * @Version: 2.0
+ * @Autor: Yaowen Liu
+ * @Date: 2020-11-30 10:14:41
+ * @LastEditors: Yaowen Liu
+ * @LastEditTime: 2020-12-31 18:11:06
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Canvas小球</title>
+  <style>
+    * {
+      padding: 0;
+      margin: 0;
+      line-height: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="canvas"></canvas>
+
+  <script src="./js/vector2d.js"></script>
+  <script src="./js/utils.js"></script>
+  <script>
+    const minRadius = 20;
+    const maxRadius = 20;
+    const count = 10;
+    const minVelocity = 6;
+    const maxVelocity = 8;
+    const subSpeed = 3 / 1000;
+    const isStop = false;
+
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const mouse = {
+      x: undefined,
+      y: undefined
+    }
+
+    document.addEventListener('mousemove', event => {
+      mouse.x = event.clientX;
+      mouse.y = event.clientY;
+    })
+
+    window.addEventListener('resize', event => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      init();
+    })
+
+    function Circle(x, y, radius, color, index) {
+      this.x = x;
+      this.y = y;
+      this.radius = radius;
+      this.color = color;
+      this.index = index;
+      this.collideTimes = 0;
+      this.m = Math.PI * Math.pow(radius, 2);
+      this.velocity = {
+        x: (Math.random() - 0.5) * randomNumber(minVelocity, maxVelocity),
+        y: (Math.random() - 0.5) * randomNumber(minVelocity, maxVelocity)
+      }
+    }
+
+    Circle.prototype.draw = function () {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius, Math.PI * 2, false);
+      ctx.fillStyle = this.color;
+      ctx.fill();
+      ctx.closePath();
+
+      ctx.font = `normal 900 ${this.radius / 4}px Verdana`;
+      ctx.fillStyle = '#ffffff';
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${this.index + 1}(${this.collideTimes})`, this.x, this.y);
+    }
+
+    Circle.prototype.update = function () {
+      this.draw();
+      this.collide();
+
+      if (this.x < this.radius || this.x > canvas.width - this.radius) {
+        this.velocity.x = -this.velocity.x;
+      }
+
+      if (this.y < this.radius || this.y > canvas.height - this.radius) {
+        this.velocity.y = -this.velocity.y;
+      }
+
+      this.x += this.velocity.x;
+      this.y += this.velocity.y;
+
+      // 如果有减速度
+      if (!subSpeed) return;
+      if (this.velocity.x > 0) {
+        this.velocity.x = Math.max(0, this.velocity.x - subSpeed);
+      } else {
+        this.velocity.x = Math.min(0, this.velocity.x + subSpeed);
+      }
+      if (this.velocity.y > 0) {
+        this.velocity.y = Math.max(0, this.velocity.y - subSpeed);
+      } else {
+        this.velocity.y = Math.min(0, this.velocity.y + subSpeed);
+      }
+    }
+
+    // 碰撞检测
+    Circle.prototype.collisionDetect = function (a, b) {
+      const dx = Math.abs(b.x - a.x);
+      const dy = Math.abs(b.y - a.y);
+      const d = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
+
+      const dxNext = Math.abs((a.x + a.velocity.x) - (b.x + b.velocity.x));
+      const dyNext = Math.abs((a.y + a.velocity.y) - (b.y + b.velocity.y));
+      const dNext = Math.sqrt(Math.pow(dxNext, 2) + Math.pow(dyNext, 2));
+      if (dNext < a.radius + b.radius && d > dNext) {
+        return true;
+      }
+      return false;
+    }
+
+    // 碰撞
+    Circle.prototype.collide = function () {
+      circles.forEach(circle => {
+        if (this !== circle) {
+          const a = this;
+          const b = circle;
+          if (this.collisionDetect(a, b)) {
+            a.collideTimes += 1;
+            b.collideTimes += 1;
+
+            const aParams = {
+              x: a.x,
+              y: a.y,
+              vx: a.velocity.x,
+              vy: a.velocity.y,
+              m: a.m
+            }
+            const bParams = {
+              x: b.x,
+              y: b.y,
+              vx: b.velocity.x,
+              vy: b.velocity.y,
+              m: a.m
+            }
+            const collideAfterSpeed = collisionDetect(aParams, bParams);
+            // 设置新的速度
+            a.velocity.x = collideAfterSpeed.a.x;
+            a.velocity.y = collideAfterSpeed.a.y;
+            b.velocity.x = collideAfterSpeed.b.x;
+            b.velocity.y = collideAfterSpeed.b.y;
+          }
+        }
+      })
+    }
+
+    // 旋转矢量
+    function rotate(x, y, angle) {
+      return {
+        x: x * Math.cos(angle) - y * Math.sin(angle),
+        y: x * Math.sin(angle) + y * Math.cos(angle),
+      }
+    }
+
+    let circles = [];
+    function init() {
+      circles = [];
+      for (let i = 0; i < count; i++) {
+        const radius = randomNumber(minRadius, maxRadius);
+        const x = randomNumber(radius, canvas.width - radius);
+        const y = randomNumber(radius, canvas.height - radius);
+        const color = randomColor();
+        circles.push(new Circle(x, y, radius, color, i));
+      }
+    }
+
+    function addBall() {
+      const radius = randomNumber(minRadius, maxRadius);
+      const x = mouse.x;
+      const y = mouse.y;
+      const color = randomColor();
+      circles.push(new Circle(x, y, radius, color, circles.length));
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      circles.forEach(circle => {
+        circle.update();
+      })
+    }
+
+    init();
+    animate();
+  </script>
+</body>
+
+</html>

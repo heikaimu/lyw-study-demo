@@ -1,0 +1,59 @@
+<!--
+ * @Description: 绘制SVG矩形
+ * @Version: 2.0
+ * @Autor: Yaowen Liu
+ * @Date: 2020-11-30 10:14:41
+ * @LastEditors: Yaowen Liu
+ * @LastEditTime: 2020-11-30 13:08:40
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <style>
+    * {
+      padding: 0;
+      margin: 0;
+    }
+
+    .box {
+      width: 100vw;
+      height: 100vh;
+      background-color: #f2f2f2;
+    }
+
+    .stroke {
+      stroke: url(#myLinearGradient1);
+      stroke-width: 5px;
+      stroke-dasharray: 20;
+    }
+    .fill {
+      fill:url(#myLinearGradient1);
+      fill-opacity: 1;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="box">
+    <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <defs>
+        <linearGradient id="myLinearGradient1"
+        x1="0%" y1="0%"
+        x2="0%" y2="100%"
+        spreadMethod="pad">
+        <stop offset="0%" stop-color="red" stop-opacity="1"></stop>
+        <stop offset="50%" stop-color="#006600" stop-opacity="1"></stop>
+        <stop offset="100%" stop-color="#ffffff" stop-opacity="1"></stop>
+        </linearGradient>
+      </defs>
+      <rect x="10" y="10" width="200" height="200" rx="40" ry="40" class="stroke fill"></rect>
+    </svg>
+  </div>
+</body>
+
+</html>

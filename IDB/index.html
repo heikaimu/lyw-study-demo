@@ -1,0 +1,268 @@
+<!--
+ * @Description: 
+ * @Version: 2.0
+ * @Autor: Yaowen Liu
+ * @Date: 2020-06-24 13:04:38
+ * @LastEditors: Yaowen Liu
+ * @LastEditTime: 2020-12-01 14:57:20
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>IndexedDB</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .title {
+      padding: 20px;
+      background-color: #f9f9f9;
+      text-align: center;
+      font-size: 20px;
+    }
+
+    .todolist li {
+      padding: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #f2f2f2;
+    }
+
+    .todolist li .text {
+      font-size: 14px;
+      color: #666;
+    }
+
+    .todolist li span {
+      font-size: 12px;
+      color: #F56C6C;
+      cursor: pointer;
+    }
+
+    .todolist li span.edit {
+      color: #409EFF;
+    }
+
+    .add-form {
+      padding: 10px;
+      background-color: #f2f2f2;
+      display: flex;
+    }
+
+    .add-form input {
+      border: 1px solid #ccc;
+      height: 30px;
+      flex: 1;
+      text-indent: 10px;
+      font-size: 16px;
+    }
+
+    .add-form button {
+      padding: 0 20px;
+      border-radius: 3px;
+      margin-left: 10px;
+      border: none;
+      outline: none;
+      background-color: #409EFF;
+      color: #fff;
+    }
+  </style>
+</head>
+
+<body>
+  <h1 class="title">IndexedDB 简单demo</h1>
+
+  <ul class="todolist" id="todolist"></ul>
+
+  <div class="add-form">
+    <input type="text" id="content">
+    <button onclick="add()">新增</button>
+  </div>
+
+  <script>
+    function IDB() {
+      this.db = null;
+
+      this.init = () => {
+        return new Promise((resolve, reject) => {
+          const request = window.indexedDB.open('my_first_db');
+          // 失败
+          request.onerror = event => {
+            console.log('数据库打开失败');
+            reject(event);
+          }
+          // 成功
+          request.onsuccess = event => {
+            this.db = request.result;
+            console.log(this.db)
+            resolve(event);
+            console.log('数据库打开成功');
+          }
+          // 版本迁移
+          request.onupgradeneeded = event => {
+            console.log('11');
+            this.db = event.target.result;
+            if (!this.db.objectStoreNames.contains('todo')) {
+              const objectStore = this.db.createObjectStore('todo', {
+                keyPath: 'id',
+                autoIncrement: true
+              });
+            }
+            objectStore.createIndex('content', 'content', { unique: false });
+            objectStore.createIndex('date', 'date', { unique: true });
+          }
+        })
+
+      }
+
+      // 新增
+      this.add = content => {
+        return new Promise((resolve, reject) => {
+          const request = this.db.transaction('todo', 'readwrite')
+            .objectStore('todo')
+            .add({ content: content, date: new Date() });
+
+          request.onsuccess = event => {
+            resolve(event);
+            console.log('新增成功');
+          }
+          request.onerror = event => {
+            reject(event);
+            console.log('新增失败');
+          }
+        })
+      }
+
+      // 更新
+      this.update = (id, content) => {
+        return new Promise((resolve, reject) => {
+          const request = this.db.transaction('todo', 'readwrite')
+            .objectStore('todo')
+            .put({ id, content, date: new Date() });
+
+          request.onsuccess = event => {
+            resolve(event);
+            console.log('更新数据成功');
+          }
+          request.onerror = event => {
+            reject(event);
+            console.log('更新数据失败');
+          }
+        })
+      }
+
+      // 删除
+      this.remove = id => {
+        return new Promise((resolve, reject) => {
+          const request = this.db.transaction('todo', 'readwrite')
+            .objectStore('todo')
+            .delete(id);
+
+          request.onsuccess = event => {
+            resolve(event);
+            console.log('删除数据成功');
+          }
+          request.onerror = event => {
+            reject(event);
+            console.log('删除数据失败');
+          }
+        })
+      }
+
+      // 读取
+      this.read = id => {
+        return new Promise((resolve, reject) => {
+          const request = this.db.transaction('todo')
+            .objectStore('todo')
+            .get(id);
+
+          request.onsuccess = event => {
+            if (request.result) {
+              resolve(request.result)
+            } else {
+              reject();
+            }
+          }
+          request.onerror = event => {
+            reject();
+            console.log('获取数据失败');
+          }
+        })
+      }
+
+      // 遍历数据
+      this.readAll = () => {
+        return new Promise((resolve, reject) => {
+          const objectStore = this.db.transaction('todo').objectStore('todo');
+          const list = [];
+          objectStore.openCursor().onsuccess = event => {
+            const cursor = event.target.result;
+
+            if (cursor) {
+              list.push(cursor.value);
+              cursor.continue();
+            } else {
+              resolve(list);
+            }
+          }
+        })
+      }
+    }
+
+    // 实例化
+    const idb = new IDB();
+    idb.init().then(() => {
+      readAll();
+    });
+
+    function add() {
+      const content = document.getElementById('content').value;
+      idb.add(content).then(() => {
+        readAll();
+        document.getElementById('content').value = '';
+      });
+    }
+
+    function readAll() {
+      idb.readAll().then(res => {
+        const elList = res.map(item => {
+          return `
+          <li>
+          <p class="text">${item.content}</p>
+          <div class="operation">
+          <span class="remove" onclick="remove(${item.id})">删除</span>
+          <span class="edit" onclick="update(${item.id})">编辑</span>
+          </div>
+          </li>
+          `
+        }).join('');
+        document.getElementById('todolist').innerHTML = elList;
+      });
+    }
+
+    function remove(id) {
+      idb.remove(id).then(() => {
+        readAll();
+      })
+    }
+
+    function update(id) {
+      idb.read(id).then(row => {
+        const newContent = prompt('输入新的内容', row.content);
+        idb.update(id, newContent).then(() => {
+          readAll();
+        });
+      })
+    }
+  </script>
+</body>
+
+</html>

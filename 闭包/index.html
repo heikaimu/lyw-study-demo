@@ -1,0 +1,47 @@
+<!--
+ * @Description: 
+ * @Version: 2.0
+ * @Autor: Yaowen Liu
+ * @Date: 2020-06-28 09:55:59
+ * @LastEditors: Yaowen Liu
+ * @LastEditTime: 2020-06-28 10:11:48
+--> 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>闭包</title>
+</head>
+<body>
+  <h3>什么是必报？</h3>
+  <p>可以获取函数内部变量的内部函数，就是闭包</p>
+  <h3>闭包的特性</h3>
+  <ol>
+    <li>闭包是是一个内部函数</li>
+    <li>闭包可以让外部获取到函数内部的变量</li>
+    <li>这些变量会被保存在内存中</li>
+  </ol>
+
+  <script>
+    function f1() {
+      let b = 999;
+      add2 = () => {
+        b ++;
+      }
+      function f2() {
+        console.log(b);
+      }
+      return f2;
+    }
+    const res = f1();
+    console.log('有闭包，变量被保存在了内存中，每次执行+1都会咋在之前的基础上+1')
+    res();
+    add2();
+    res();
+    add2();
+    res();
+  </script>
+</body>
+</html>

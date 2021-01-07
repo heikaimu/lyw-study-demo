@@ -1,0 +1,79 @@
+<!--
+ * @Description: 返回透明图层
+ * @Version: 2.0
+ * @Autor: Yaowen Liu
+ * @Date: 2020-12-31 10:24:23
+ * @LastEditors: Yaowen Liu
+ * @LastEditTime: 2020-12-31 10:40:46
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>返回透明图层</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+    }
+
+    .box {
+      width: 100vw;
+      height: 100vh;
+      background-color: #666666;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="box">
+      <img id="img1" src="" alt="">
+      <img id="img2" src="" alt="">
+  </div>
+
+  <script>
+    const url1 = 'https://scannables.scdn.co/uri/plain/svg/ffffff/black/640/spotify:track:54bFM56PmE4YLRnqpW6Tha'
+    getTransparentImage(url1, 0).then(res => {
+      document.getElementById('img1').setAttribute('src', res);
+    })
+
+    const url2 = 'https://scannables.scdn.co/uri/plain/svg/000000/white/640/spotify:track:54bFM56PmE4YLRnqpW6Tha'
+    getTransparentImage(url2, 255 * 3).then(res => {
+      document.getElementById('img2').setAttribute('src', res);
+    })
+
+    function getTransparentImage(url, keepRGBCount) {
+      return new Promise((resolve, reject) => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        img.onload = () => {
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const data = imageData.data;
+          for (var i = 0; i < data.length; i += 4) {
+            if (data[i] + data[i + 1] + data[i + 2] !== keepRGBCount) {
+              data[i + 3] = 0;
+            }
+          }
+          ctx.putImageData(imageData, 0, 0);
+          resolve(canvas.toDataURL());
+        }
+        img.crossOrigin = 'anonymous';
+        img.src = url;
+      })
+    }
+  </script>
+</body>
+
+</html>

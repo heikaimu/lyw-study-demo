@@ -1,0 +1,399 @@
+<!--
+ * @Description: Canvas小球
+ * @Version: 2.0
+ * @Autor: Yaowen Liu
+ * @Date: 2020-11-30 10:14:41
+ * @LastEditors: Yaowen Liu
+ * @LastEditTime: 2021-01-06 18:26:15
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Canvas小球</title>
+  <style>
+    * {
+      padding: 0;
+      margin: 0;
+      line-height: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="canvas"></canvas>
+
+  <script src="./js/vector2d.js"></script>
+  <script src="./js/utils.js"></script>
+  <script>
+    const HOLE_RADIUS = 26;
+    const HOLE_COLOR = '#111111';
+    const RADIUS = 16; // 最小半径
+    const F = 0.01; // 摩擦系数
+    let circles = [];
+    let holes = [];
+
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    window.addEventListener('resize', event => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      init();
+    })
+
+    // ==============================球==============================
+    function Circle(x, y, radius, color, type) {
+      this.originalX = this.x = x;
+      this.originalY = this.y = y;
+      this.radius = radius;
+      this.color = color;
+      this.type = type;
+      this.shadow = true;
+      this.collideTimes = 0;
+      this.m = Math.PI * Math.pow(radius, 2);
+      this.moving = true;
+      this.velocity = {
+        x: 0,
+        y: 0
+      }
+    }
+
+    Circle.prototype.reset = function () {
+      this.x = this.originalX;
+      this.y = this.originalY;
+      this.moving = false;
+      this.velocity = {
+        x: 0,
+        y: 0
+      }
+    }
+
+    Circle.prototype.draw = function () {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius, Math.PI * 2, false);
+      if (this.shadow) {
+        var g = ctx.createRadialGradient(this.x - 3, this.y - 3, this.radius / 10, this.x, this.y, this.radius);
+        g.addColorStop(0, '#ffffff');
+        g.addColorStop(0.5, this.color);
+        ctx.fillStyle = g;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 1;
+        ctx.shadowBlur = 5;
+        ctx.shadowColor = "#666666";
+      } else {
+        ctx.fillStyle = this.color;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = "";
+      }
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    Circle.prototype.update = function () {
+      // 进洞消失
+      const holeDistanceList = holes.map(hole => {
+        return Math.abs(getDistance(hole, this));
+      }).sort((a, b) => a - b);
+
+      if (holeDistanceList[0] < HOLE_RADIUS) {
+        if (this.type === 'whiteBall') {
+          this.reset();
+        } else {
+          this.moving = false;
+        }
+        return;
+      }
+
+      this.draw();
+      this.collide();
+
+      // 碰壁反弹
+      if (this.x < this.radius + 20 || this.x > canvas.width - this.radius - 20) {
+        this.velocity.x = -this.velocity.x;
+      }
+
+      if (this.y < this.radius + 20 || this.y > canvas.height - this.radius - 20) {
+        this.velocity.y = -this.velocity.y;
+      }
+
+      this.x += this.velocity.x;
+      this.y += this.velocity.y;
+
+      // 如果有减速度
+      if (this.velocity.x === 0 && this.velocity.y === 0) {
+        this.moving = false;
+      } else {
+        this.moving = true;
+        const newVx = this.velocity.x - this.velocity.x * F;
+        const newVy = this.velocity.y - this.velocity.y * F;
+        this.velocity.x = Math.abs(newVx) < 0.1 ? 0 : newVx;
+        this.velocity.y = Math.abs(newVy) < 0.1 ? 0 : newVy;
+      }
+    }
+
+    // 碰撞检测
+    Circle.prototype.collisionDetect = function (a, b) {
+      const dx = Math.abs(b.x - a.x);
+      const dy = Math.abs(b.y - a.y);
+      const d = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
+
+      const dxNext = Math.abs((a.x + a.velocity.x) - (b.x + b.velocity.x));
+      const dyNext = Math.abs((a.y + a.velocity.y) - (b.y + b.velocity.y));
+      const dNext = Math.sqrt(Math.pow(dxNext, 2) + Math.pow(dyNext, 2));
+      if (dNext < a.radius + b.radius && d > dNext) {
+        return true;
+      }
+      return false;
+    }
+
+    // 碰撞
+    Circle.prototype.collide = function () {
+      circles.forEach(circle => {
+        if (this !== circle) {
+          const a = this;
+          const b = circle;
+          if (this.collisionDetect(a, b)) {
+            a.collideTimes += 1;
+            b.collideTimes += 1;
+
+            const aParams = {
+              x: a.x,
+              y: a.y,
+              vx: a.velocity.x,
+              vy: a.velocity.y,
+              m: a.m
+            }
+            const bParams = {
+              x: b.x,
+              y: b.y,
+              vx: b.velocity.x,
+              vy: b.velocity.y,
+              m: a.m
+            }
+            const collideAfterSpeed = collisionDetect(aParams, bParams);
+            // 设置新的速度
+            a.velocity.x = collideAfterSpeed.a.x;
+            a.velocity.y = collideAfterSpeed.a.y;
+            b.velocity.x = collideAfterSpeed.b.x;
+            b.velocity.y = collideAfterSpeed.b.y;
+          }
+        }
+      })
+    }
+
+    // ==============================击球杆==============================
+    function Hole(x, y, radius, color, type) {
+      // 集成小球类
+      Circle.call(this, ...arguments);
+      this.shadow = false;
+    }
+
+    function MiddleFun() { }
+    MiddleFun.prototype = Circle.prototype;
+    Hole.prototype = new MiddleFun();
+    Hole.prototype.constructor = Hole;
+
+    Hole.prototype.update = function () {
+      this.draw();
+    }
+
+    // ==============================击球杆==============================
+    function HitStick(ball) {
+      this.ball = ball;
+      this.power = this.powerMin = 1;
+      this.powerMax = 10;
+      this.powerVelocity = 1;
+      this.ballMoving = false;
+      this.isMouseOver = false;
+      this.timer = null;
+      this.mouse = {
+        x: undefined,
+        y: undefined
+      }
+
+      // 绑定事件
+      this.bindEvents = function () {
+        canvas.addEventListener('mouseover', () => {
+          this.isMouseOver = true;
+        })
+        canvas.addEventListener('mouseleave', () => {
+          this.isMouseOver = false;
+        })
+        canvas.addEventListener('mousemove', event => {
+          this.mouse.x = event.clientX;
+          this.mouse.y = event.clientY;
+        })
+        canvas.addEventListener('mousedown', () => {
+          hitStick.mousedown();
+        })
+        canvas.addEventListener('mouseup', () => {
+          hitStick.mouseup();
+        })
+      }
+
+      // 鼠标压下
+      this.mousedown = function () {
+        if (this.ballMoving) {
+          return;
+        }
+
+        this.power = this.powerMin;
+        this.powerVelocity = 1;
+        if (!this.timer) {
+          this.timer = setInterval(() => {
+            this.power += this.powerVelocity;
+            if (this.power >= this.powerMax || this.power <= this.powerMin) {
+              this.powerVelocity = -this.powerVelocity;
+            }
+          }, 100);
+        }
+      }
+
+      // 鼠标松开
+      this.mouseup = function () {
+        if (this.ballMoving) {
+          return;
+        }
+
+        clearInterval(this.timer);
+        this.timer = null;
+
+        this.changeBallVelocity();
+        this.power = this.powerMin;
+      }
+
+      // 修改击打小球加速度
+      this.changeBallVelocity = function () {
+        const angle = Math.atan2(this.mouse.y - this.ball.y, this.mouse.x - this.ball.x);
+        const distance = Math.sqrt(Math.pow(this.mouse.y - this.ball.y, 2) + Math.pow(this.mouse.x - this.ball.x, 2));
+        const distanceV = this.power * 5;
+        this.ball.velocity.x = distanceV * Math.cos(angle);
+        this.ball.velocity.y = distanceV * Math.sin(angle);
+      }
+
+      // 绘制
+      this.draw = function () {
+        // 虚线
+        ctx.beginPath();
+        ctx.setLineDash([1, 3]);
+        ctx.strokeStyle = this.ball.color;
+        ctx.moveTo(this.ball.x, this.ball.y);
+        ctx.lineTo(this.mouse.x, this.mouse.y);
+        ctx.stroke();
+        ctx.closePath();
+        // 虚线圆
+        ctx.beginPath();
+        ctx.fillStyle = this.ball.color;
+        ctx.setLineDash([1, 3]);
+        ctx.arc(this.mouse.x, this.mouse.y, this.ball.radius - 1, Math.PI * 2, false);
+        ctx.stroke();
+        ctx.closePath();
+        // 力道
+        ctx.beginPath();
+        ctx.fillStyle = this.ball.color;
+        ctx.arc(this.mouse.x, this.mouse.y, this.ball.radius * this.power / this.powerMax, Math.PI * 2, false);
+        ctx.fill();
+        ctx.closePath();
+      }
+
+      // 更像球杆
+      this.update = function (ballMoving) {
+        this.ballMoving = ballMoving;
+        if (!this.ballMoving && this.isMouseOver) {
+          this.draw();
+        }
+      }
+
+      this.bindEvents();
+    }
+
+    // 绘制背景
+    function drawBg() {
+      // 清空画板
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#409EFF';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#E6A23C';
+      ctx.fillRect(0, 0, canvas.width, 20);
+      ctx.fillRect(0, 0, 20, canvas.height);
+      ctx.fillRect(0, canvas.height - 20, canvas.width, canvas.height);
+      ctx.fillRect(canvas.width - 20, 0, canvas.width, canvas.height);
+    }
+
+    // ==============================初始化数据==============================
+
+    function init() {
+      // 白球
+      (function () {
+        const whiteBall = new Circle(canvas.width / 5, canvas.height / 2, RADIUS, '#ffffff', 'whiteBall');
+        circles.push(whiteBall);
+        hitStick = new HitStick(whiteBall);
+      })();
+
+      // 主色球
+      (function (startPos, radius, level) {
+        const balls = [];
+        for (let i = 0; i < level; i++) {
+          const x = startPos.x + Math.sqrt(Math.pow(radius * 2, 2) - Math.pow(radius, 2)) * i;
+          for (let j = 0; j < i + 1; j++) {
+            let y = 0;
+            // 单数
+            if (j % 2 === 1) {
+              y = startPos.y + radius * 2 * j - i * radius;
+            } else {
+              // 双数
+              y = startPos.y + radius * 2 * j - i * radius;
+            }
+            balls.push({
+              x,
+              y
+            })
+          }
+        }
+        balls.forEach(ball => {
+          circles.push(new Circle(ball.x, ball.y, RADIUS, 'red', 'redBall'));
+        })
+      })({ x: canvas.width - 400, y: canvas.height / 2 }, RADIUS, 6)
+
+      // 洞
+      const hole1 = new Hole(20, 20, HOLE_RADIUS, HOLE_COLOR, 'hole');
+      const hole2 = new Hole(20, canvas.height - 20, HOLE_RADIUS, HOLE_COLOR, 'hole');
+      const hole3 = new Hole(canvas.width / 2, 10, HOLE_RADIUS, HOLE_COLOR, 'hole');
+      const hole4 = new Hole(canvas.width / 2, canvas.height - 10, HOLE_RADIUS, HOLE_COLOR, 'hole');
+      const hole5 = new Hole(canvas.width - 20, 20, HOLE_RADIUS, HOLE_COLOR, 'hole');
+      const hole6 = new Hole(canvas.width - 20, canvas.height - 20, HOLE_RADIUS, HOLE_COLOR, 'hole');
+      holes.push(hole1, hole2, hole3, hole4, hole5, hole6);
+    }
+
+    // 循环
+    function animate() {
+      requestAnimationFrame(animate);
+      // 绘制背景
+      drawBg();
+      // 绘制洞
+      holes.forEach(hole => {
+        hole.update();
+      })
+      // 绘制小球
+      circles.forEach(circle => {
+        circle.update();
+      })
+      // 绘制撞击杆
+      const ballMoving = circles.some(circle => circle.moving);
+      hitStick.update(ballMoving);
+    }
+
+    init();
+    animate();
+  </script>
+</body>
+
+</html>

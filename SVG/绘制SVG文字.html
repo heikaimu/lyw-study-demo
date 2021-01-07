@@ -1,0 +1,42 @@
+<!--
+ * @Description: 绘制SVG文字
+ * @Version: 2.0
+ * @Autor: Yaowen Liu
+ * @Date: 2020-11-30 10:14:41
+ * @LastEditors: Yaowen Liu
+ * @LastEditTime: 2020-11-30 10:30:18
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <style>
+  .text {
+    font-size: 60px;
+    fill: none;
+    stroke: #333333;
+    stroke-width: 2px;
+    stroke-dasharray: 10, 100;
+    stroke-dashoffset: 10;
+    animation: draw 3s linear forwards;
+  }
+  .text:hover {
+    animation: draw 3s linear infinite;
+  }
+  @keyframes draw {
+    to {
+      stroke-dasharray: 1000;
+      stroke-dashoffset: 0;
+    }
+  }
+  </style>
+</head>
+<body>
+  <svg xmlns="http://www.w3.org/2000/svg">
+    <text class="text" x="0" y="60">Witemedia</text>
+  </svg>
+</body>
+</html>

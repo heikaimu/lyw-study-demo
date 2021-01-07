@@ -1,0 +1,66 @@
+<!--
+ * @Description: 
+ * @Version: 2.0
+ * @Autor: Yaowen Liu
+ * @Date: 2020-06-04 17:17:33
+ * @LastEditors: Yaowen Liu
+ * @LastEditTime: 2020-06-04 18:26:48
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+</head>
+
+<body>
+  <ul id="app"></ul>
+
+  <script>
+    const app = document.getElementById("app");
+    const COUNT = 100000;
+    const STEP = 100;
+    let index = 0;
+
+           for (let i = 0; i < COUNT; i++) {
+            let li = document.createElement("li");
+            li.innerHTML = i;
+            app.appendChild(li);
+          }
+
+    // 时间分段 settimeout
+    // function load() {
+    //   index += STEP;
+    //   if (index <= COUNT) {
+    //     setTimeout(() => {
+    //       for (let i = 0; i < STEP; i++) {
+    //         let li = document.createElement("li");
+    //         li.innerHTML = i;
+    //         app.appendChild(li);
+    //       }
+    //       load();
+    //     }, 0);
+    //   }
+    // }
+    // load();
+
+    // requestAnimationFrame
+    // function render() {
+    //   index += STEP;
+    //   if (index <= COUNT) {
+    //     for (let i = 0; i < STEP; i++) {
+    //         let li = document.createElement("li");
+    //         li.innerHTML = i;
+    //         app.appendChild(li);
+    //       }
+    //       window.requestAnimationFrame(render);
+    //   }
+    // }
+    // window.requestAnimationFrame(render);
+  </script>
+</body>
+
+</html>
